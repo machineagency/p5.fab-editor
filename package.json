@@ -1,0 +1,22 @@
+{
+  "name": "p5.fab",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.3.1"
+  },
+  "dependencies": {
+    "@codemirror/lang-javascript": "github:codemirror/lang-javascript",
+    "acorn": "^8.12.0",
+    "codemirror": "^6.0.1",
+    "lit-html": "^3.1.4",
+    "split": "^1.0.1",
+    "split.js": "^1.6.5"
+  }
+}

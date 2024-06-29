@@ -1,0 +1,362 @@
+// import { dispatch } from "./dispatch.js";
+import { html } from "lit-html";
+import { GLOBAL_STATE } from "../state";
+import { setTemplate, saveSketch, setExample } from "../events";
+import { newTemplate } from "../examples/new";
+// import { initCodeMirror } from "./codemirror/codemirror.js";
+// import "./codemirror/codemirror.js";
+// import { files } from "./components-names.js";
+// import { downloadSVG, downloadText, downloadPNG } from "./events/download.js"
+// import { drawImportItems } from "./views/drawImportItems.js";
+// import { drawComponentMenu } from "./views/drawComponentMenu.js";
+// import { layersColorPicker } from "./views/layersColorPicker.js";
+// import { renderPreviewFootprint } from "./views/renderPreviewFootprint.js";
+// import { svgViewer } from "./views/svgViewer.js";
+// import { renderFootprint } from "./views/renderFootprint.js";
+// import { clearSelectedPath } from "./clearSelectedPath.js";
+// import logoURL from '../logo.svg'
+// import { inputRenderers } from "./views/inputRenderers.js";
+
+// import { drawDownloadGerberModal } from "./views/drawDownloadGerberModal.js";
+// import { drawDownloadKiCadModal } from "./views/drawDownloadKiCadModal.js";
+// import { formatCode } from "./formatCode.js";
+// import { saveFile } from "./saveFile.js";
+// import { drawSvgToModsModal } from "./views/drawSvgToModsModal.js";
+// import "./components/netlist-editor.js";
+// import "./components/wire-editor.js";
+// import "./components/color-picker.js";
+// import "./components/footprint-editor/footprint-editor.js";
+
+
+export function view(state) {
+    return html`
+    <div class="top-menu">
+      <div class="left">
+        <span class="logo">p5.fab</span>
+        <div class="menu-item" @click="${() => setTemplate(newTemplate)}">new</div>
+        <div class="menu-item" @click="${saveSketch}">save</div>
+        <label for="file-upload" class="menu-item">upload</label>
+        <input id="file-upload" type="file" />
+        <div class="menu-item">examples
+          <div class="menu-item-dropdown-content">
+            <i @click="${() => setExample('line-vase')}">line vase</i>
+            <i @click="setTemplate('2point5D-sketching')">2.5D sketching</i>
+            <i @cick="setTemplate('ripple')">ripple texture</i>
+            <i @cllick="setTemplate('nonplanar')">non-planar vase</i>
+          </div>
+        </div>
+      </div>
+      <div class="right">
+        <div class="menu-item">machine settings
+        </div> 
+        <div class="menu-item" onclick="updatePreview()">visualize toolpaths</div>
+        <div class="menu-item" onclick="evaluateJs('_fab.stopPrint();')">midi</div>
+        <a href="https://github.com/machineagency/p5.fab" target="_blank" rel="noopener noreferrer"
+          id="top-bar-link">source</a>
+        <div class="menu-item" onclick="showInfoModal()">info</div>
+        <!-- <div class="menu-item">tweet artifact</div> -->
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="left-content">
+        <div class="code-editor"></div>
+        <div id="error-log"></div>
+      </div>
+      <div class="right-content">
+        <iframe id="preview" src="./editor/js/views/preview.html"></iframe>
+      </div>
+      <div class="pane-manager">
+      </div>
+    </div>
+
+    <div class="midi-content">
+    </div>
+    `
+}
+// export function view(state) {
+// 	return html`
+// 		${menu(state)}
+
+// 		<div class="content">
+// 			<div class="left-side">
+// 				<div class="code-editor"></div>
+// 				${state.error !== "" ? html`<div class="error-log">${state.error}</div>` : "" }
+// 			</div>
+// 			<div class="right-side" @mousedown=${() => dispatch("RUN", { flatten: false })}>
+// 				${svgViewer(state)}
+// 				${state.selectedPathIndex >= 0
+// 					? html`
+// 						<div class="path-selected">
+// 							<div
+// 								class="clear-selected-path"
+// 								@click=${clearSelectedPath}>
+// 								unselect path
+// 							</div>
+// 							<select
+// 								.value=${state.cubicHandleManipulation}
+// 								@input=${e => {
+// 									state.cubicHandleManipulation = e.target.value;
+// 									dispatch("RENDER");
+// 								}}>
+// 							  <option value="symmetric">symmetric</option>
+// 							  <option value="colinear">colinear</option>
+// 							  <option value="broken">broken</option>
+// 							</select>
+// 							<div>hold z to toggle junction type</div>
+// 							<div>hold x to delete point</div>
+// 						</div>
+// 						`
+// 					: ""}
+// 				<div class="footprint-toolbox">
+// 					<div style="overflow: hidden; overflow-y: scroll; min-height: 100%;">
+// 						${state.inputs.length > 0 ? html`<div class="toolbox-title">Inputs:</div>` : ""}
+// 						<div class="input-panel">
+// 							${state.inputs.map(input => inputRenderers[input[0].type](...input, state))}
+// 						</div>
+
+// 						<div class="toolbox-title" @click=${e => {
+// 							document.querySelector(".footprint-list-inner").classList.toggle("hidden");
+// 							e.target.classList.toggle("inner-hidden");
+// 						}}>Footprints:</div>
+// 						<div class="footprint-list-inner">
+// 							<div class="import-button-container">
+// 								<div class="import-button" @mousedown=${() => {
+// 				          state.componentMenu = true;
+// 				          dispatch("RENDER");
+// 				        }}>import</div>
+// 				      </div>
+// 							<div class="component-list">
+// 								${Object.values(state.footprints).map(renderFootprint)}
+// 							</div>
+// 						</div>
+
+// 						<wire-editor></wire-editor>
+
+// 						${layersColorPicker(state)}
+
+// 						<div style="min-height: 100px;"></div>
+// 					</div>
+
+// 					<div class="nub" @click=${() => {
+// 						document.querySelector(".footprint-toolbox").classList.toggle("footprint-toolbox-closed");
+// 					}}></div>
+
+// 				</div>
+// 				${state.previewFootprint ? renderPreviewFootprint(...state.previewFootprint) : ""}
+// 			</div>
+// 			<div id="vertical-bar"></div>
+// 			${drawComponentMenu(files)}
+// 		</div>
+// 		<div class="drop-modal hidden">
+// 			<div class="drop-info">Upload JS file, KiCAD Component Module, SVG Component, or JSON Component</div>
+// 		</div>
+// 		${drawDownloadGerberModal(state)}
+// 		${drawDownloadKiCadModal(state)}
+// 		${drawSvgToModsModal(state)}
+// 		<netlist-editor .pcb=${state.pcb} .idToName=${state.idToName}></netlist-editor>
+// 		<footprint-editor><footprint-editor>
+// 	`
+// }
+
+// const menu = state => html`
+// 	<div class="top-menu">
+// 		<div class="left">
+// 			<img src=${logoURL} class="w-10 m-1" alt="fab-circuit-logo" />
+// 			<div
+// 				class="menu-item"
+// 				@click=${() => dispatch("RUN")}>
+// 				run (shift + enter)
+// 			</div>
+// 			<div class="menu-item" @click=${() => dispatch("NEW_FILE")}>new</div>
+// 			<div
+// 				class="menu-item"
+// 				@click=${() => {
+//         const code = state.codemirror.view.state.doc.toString();
+
+//         saveFile(code);
+//     }}>
+// 				save${state.needsSaving ? "*" : ""}
+// 			</div>
+// 			 <div class="menu-item dropdown-container">
+// 				download
+// 				<div class="dropdown-content">
+// 					<div class="menu-item"
+// 						@click=${() => { dispatch("RUN", { flatten: true }); downloadSVG(state); }}>
+// 						svg
+// 					</div class="menu-item">
+// 					<div class="menu-item"
+// 						@click=${() => { dispatch("RUN", { flatten: true }); downloadPNG(state); }}>
+// 						png
+// 					</div class="menu-item">
+// 					<div class="menu-item"
+// 						@click=${() => downloadText(`${state.name === "" ? "anon" : state.name}.js`, state.codemirror.view.state.doc.toString())}>
+// 						js
+// 					</div>
+// 					<div class="menu-item"
+// 						@click=${(e) => {
+//         state.downloadGerberModal = true;
+//         dispatch("RENDER");
+//     }}>
+// 						gerber
+// 					</div class="menu-item">
+// 					<div class="menu-item"
+// 						@click=${(e) => {
+//         state.downloadKiCadModal = true;
+//         dispatch("RENDER");
+//     }}>
+// 						kicad
+// 					</div>
+// 					<div class="menu-item"
+// 						@click=${(e) => {
+//         state.svgToModsOptions.selectedMachine = undefined;
+//         state.svgToModsModal = true;
+//         dispatch("RENDER");
+//     }}>
+// 						mods
+// 					</div>
+// 					<input 
+// 						class="input-item"
+// 						style="margin: 3px;"
+// 						.value=${state.name}
+// 						placeholder="name-here"
+// 						@input=${(e) => { state.name = e.target.value }}/>
+// 				</div>
+// 			</div>
+// 			<div
+// 				class="menu-item center-button"
+// 				@click=${() => {
+//         state.panZoomParams.setScaleXY(state.limits);
+//     }}>
+// 				center-view
+// 			</div>
+// 			<div
+// 				class="menu-item"
+// 				@click=${() => {
+//         const ogCode = state.codemirror.view.state.doc.toString()
+//         const formatted = formatCode(ogCode)
+//         state.codemirror.view.dispatch({
+//             changes: {
+//                 from: 0,
+//                 to: ogCode.length,
+//                 insert: formatted
+//             }
+//         })
+//     }}>
+// 				tidy code
+// 			</div>
+// 			<div class="menu-item dropdown-container">
+// 				options
+// 				<div class="dropdown-content">
+// 					<div class="check-item">
+// 						<span>handles</span>
+// 						<input
+// 							type="checkbox"
+// 							checked=${state.viewHandles}
+// 							@change=${(e) => {
+//         state.viewHandles = e.target.checked;
+//         dispatch("RENDER");
+//     }}
+// 							class="handles-checkbox">
+// 						</input>
+// 					</div>
+// 					<div class="check-item">
+// 						<span>grid</span>
+// 						<input
+// 							type="checkbox"
+// 							.checked=${state.grid}
+// 							@change=${(e) => {
+//         state.grid = e.target.checked;
+//         dispatch("RENDER");
+//     }}
+// 							>
+// 						</input>
+// 					</div>
+// 					<div class="check-item">
+// 						<span>adaptiveGrid</span>
+// 						<input
+// 							type="checkbox"
+// 							.checked=${state.adaptiveGrid}
+// 							@change=${(e) => {
+//         state.adaptiveGrid = e.target.checked;
+//         dispatch("RENDER");
+//     }}
+// 							>
+// 						</input>
+// 					</div>
+// 					<div class="input-item">
+// 						<span>grid size:</span>
+// 						<input
+// 							type="number"
+// 							step="0.005"
+// 							min="0"
+// 							.value=${state.gridSize}
+// 							@change=${e => {
+//         state.gridSize = Number(e.target.value);
+//         dispatch("RENDER");
+//     }}>
+// 						</input>
+// 					</div>
+// 					<div class="check-item">
+// 						<span>show netlist</span>
+// 						<input
+// 							type="checkbox"
+// 							.checked=${state.showNetlist}
+// 							@change=${(e) => {
+//         state.showNetlist = e.target.checked;
+//         dispatch("RENDER");
+//     }}
+// 							>
+// 						</input>
+// 					</div>
+// 					<div class="check-item">
+// 						<span>snapToPad</span>
+// 						<input
+// 							type="checkbox"
+// 							.checked=${state.snapToPad}
+// 							@change=${(e) => {
+//         state.snapToPad = e.target.checked;
+//         dispatch("RENDER");
+//     }}
+// 							>
+// 						</input>
+// 					</div>
+// 					<div class="check-item">
+// 						<span>snapToPad Radius</span>
+// 						<input
+// 							type="number"
+// 							step="0.005"
+// 							min="0"
+// 							.value=${state.snapToPadRadius}
+// 							@change=${e => {
+//         state.snapToPadRadius = Number(e.target.value);
+//         dispatch("RENDER");
+//     }}>
+// 						</input>
+// 					</div>
+// 					<div class="check-item">
+// 						<span>vim mode</span>
+// 						<input
+// 							type="checkbox"
+// 							.checked=${state.vimMode}
+// 							@change=${(e) => {
+//         state.vimMode = e.target.checked;
+//         const cmEl = document.querySelector(".code-editor");
+//         const str = state.codemirror.view.state.doc.toString();
+//         cmEl.innerHTML = "";
+//         state.codemirror = initCodeMirror(cmEl, state.vimMode);
+//         state.codemirror.view.dispatch({
+//             changes: { from: 0, insert: str }
+//         });
+//     }}
+// 							>
+// 						</input>
+// 					</div>
+// 				</div>
+// 			</div>
+// 		</div>
+// 		<a class="github-logo" href="https://github.com/leomcelroy/svg-pcb">
+// 			<i class="fa fa-github" style="font-size:24px"></i>
+// 		</a>
+// 	</div>
+// `;
