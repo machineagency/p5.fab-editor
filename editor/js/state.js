@@ -1,40 +1,19 @@
 export const GLOBAL_STATE = {
-//   version: "v0.2.0", 
+  // Editor
   codemirror: undefined,
   sketchWindow: undefined,
-//   pcb: undefined,
-//   heldKeys: new Set(),
-//   transforming: false,
-//   transformUpdate: () => {},
-
-//   fileHandle: null,
-//   needsSaving: false,
-
-//   selectBox: {},
-
-//   footprints: {},
-//   shapes: [],
-
-//   astInfo: {},
-
-//   idToName: {},
-
-//   limits: {
-//     x: [0, 1],
-//     y: [0, 1]
-//   },
-//   mm_per_unit: 25.4,
-//   background: "#00000000",
-
-//   preview: null,
-
-  // these are added through renderpath
-//   paths: [],
-
-//   cubicHandleManipulation: "symmetric",
-
-//   selectedPathIndex: -1,
-
-//   name: "",
+  paneManager: undefined,
+  connected: false,
+  fabInit: false,
+  initialized: false,
   error: "",
+  cameraConnected: false,
+  // Check if a MIDI device is both plugged in & has established connection 
+  midiDeviceAvailable: undefined,
+  midiConnectionEstablished: undefined,
+  midiData: "",
+  fabDeviceConnected: false,
+  fabConfig: undefined,
+  mediaRecorder: null,
+  mediaRecorderBlobs: [],
 }

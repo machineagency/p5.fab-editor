@@ -8,23 +8,29 @@
 
 html,
 body {
-  font-family: system-ui;
+  /* font-family: system-ui; */
+  font-family: 'Inter', sans-serif;
   font-size: 12pt;
+  
+}
+
+::-webkit-scrollbar {
+  display: none;
 }
 
 h1 {
-  font-family: courier;
+  font-family: 'Fira Mono';
   padding-right: 10px;
 }
 
 h2 {
-  font-family: 'Inter', sans-serif;
+  /* font-family: 'Fira Sans', sans-serif; */
   padding-right: 10px;
   font-size: 24px;
 }
 
 p {
-  font-family: 'Inter', sans-serif;
+  /* font-family: 'Fira Sans', sans-serif; */
 }
 
 a {
@@ -56,22 +62,23 @@ a:hover {
 .code-editor {
   flex: 1;
   overflow: hidden;
+  position: relative;
 }
 
 .cm-editor {
-	height: 100%;
+  height: 100%;
 }
 
 .cm-path-button {
-	background: #c0fdc0d1;
-	padding-left: 3px;
-	padding-right: 3px;
-	border-radius: 5px;
+  background: #c0fdc0d1;
+  padding-left: 3px;
+  padding-right: 3px;
+  border-radius: 5px;
 }
 
 .cm-path-button:hover {
-	cursor: pointer;
-	background: #2ef72ecf;
+  cursor: pointer;
+  background: #2ef72ecf;
 }
 
 
@@ -87,15 +94,19 @@ a:hover {
   overflow: auto;
 }
 
-.styled-background {
-  background-color: black;
-  color: white;
+.flash-code-on {
+  background-color: #FF6700;
 }
+
+.flash-code-off {
+  background-color: none;
+}
+
 
 iframe {
   width: 100%;
   float: right;
-  height: 93vh;
+  height: 100%;
   border: none;
 }
 
@@ -107,16 +118,17 @@ iframe {
 }
 
 #error-log {
-  display: none;
-  position: absolute;
-  top: 85vh;
-  left: 0;
-  z-index: 9;
-  background: #e0dcec;
+  background: #aeb3f7;
   color: black;
-  height: 15vh;
-  width: 50%;
+  min-height: 80px;
   padding: 5px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  z-index: 9;
+  
+  position: absolute;
+  bottom: 0%;
+  width: 100%;
   font-family: courier;
 }
 
@@ -132,45 +144,62 @@ iframe {
   display: flex;
   align-items: center;
   text-align: center;
+  position: relative;
+  left: 25%;
   /* background: #ecdce8; */
 }
 
 .content {
-	display: flex;
-	width: 100%;
-	flex: 1;
-	overflow: hidden;
+  display: flex;
+  width: 100%;
+  flex: 1;
+  overflow: hidden;
 }
 
 .left-content {
-	/* width: calc(var(--vertical-bar) - 5px); */
+  /* width: calc(var(--vertical-bar) - 5px); */
   width: 50%;
-	display: flex;
+  display: flex;
   flex-direction: column;
 }
 
 .right-content {
-    flex: 1;
-    height: 100%;
-    position: relative;
+  flex: 1;
+  height: 100%;
+  position: relative;
 }
 
 .top-menu {
-  grid-area: top-menu;
+  /* grid-area: top-menu; */
   display: flex;
-  place-items: center;
+  justify-content: space-between;
+  
+  /* place-items: center;
   width: 100%;
   height: max-content;
   max-height: max-content;
   min-height: max-content;
-  align-items: stretch;
+  align-items: stretch; */
 }
 
 .logo {
   width: 100px;
   padding: 10px;
+  padding-right: 25px;
   font-family: "Courier New", Courier, monospace;
   font-weight: bold;
+  font-size: 1.75em;
+}
+
+.menu-item-icon {
+  cursor: pointer;
+  padding: 3px;
+  padding-left: 10px;
+  padding-right: 10px;
+  vertical-align: right;
+  display: inline;
+  border-radius: 5px;
+  position: relative;
   font-size: 1.5em;
 }
 
@@ -185,6 +214,7 @@ iframe {
   position: relative;
 }
 
+.menu-item-icon:hover,
 .menu-item:hover {
   background: black;
   color: white;
@@ -200,6 +230,31 @@ iframe {
   border-radius: 5px;
   background-color: white;
   z-index: 1;
+}
+
+/* SPLIT JS PANELS */
+.outer {
+  height: 100%;
+}
+
+.gutter {
+  background-color: #eee;
+  background-repeat: no-repeat;
+  background-position: 50%;
+}
+
+.split-horizontal,
+.gutter-horizontal {
+  float: left;
+  height: 100%;
+}
+
+.gutter-horizontal {
+  cursor: ew-resize;
+}
+
+.gutter-vertical {
+  cursor: ns-resize;
 }
 
 .menu-item-dropdown-content i {
@@ -219,8 +274,48 @@ iframe {
   color: white;
 }
 
+.video-settings {
+  padding: 5px;
+  margin-right: 25px;
+  overflow-y: scroll;
+  overflow-x: visible;
+}
+
+#camera-stream {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+
+.video-settings,
+.midi-content,
+.iframe-holder,
+.code-editor,
+.machine-settings {
+  transition: none;
+}
+
+.video-settings:not(.dragged),
+.midi-content:not(.dragged),
+.iframe-holder:not(.dragged),
+.code-editor:not(.dragged),
+.machine-settings:not(.dragged) {
+  transition: height 1s ease;
+}
+
 input[type="file"] {
   display: none;
+}
+
+#button {
+  outline: solid #FF6700 1px;
+  padding-bottom: 3px;
+}
+
+select {
+  margin: 0 1em 1em 0;
+  position: relative;
+  top: -1px;
 }
 
 .modal {
@@ -270,7 +365,6 @@ hr:after {
   font-weight: bolder;
   content: "•*´¨`*•.¸¸.•*´¨`*•.¸¸.•*´¨`*•.¸¸.•*´¨`*•.¸¸.•*´¨`*•.¸¸.•*´¨`*•.¸¸.•";
 }
-
 /**********************************
 
 SPLIT JS STYLES

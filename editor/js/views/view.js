@@ -1,362 +1,136 @@
 // import { dispatch } from "./dispatch.js";
 import { html } from "lit-html";
 import { GLOBAL_STATE } from "../state";
-import { setTemplate, saveSketch, setExample } from "../events";
-import { newTemplate } from "../examples/new";
-// import { initCodeMirror } from "./codemirror/codemirror.js";
-// import "./codemirror/codemirror.js";
-// import { files } from "./components-names.js";
-// import { downloadSVG, downloadText, downloadPNG } from "./events/download.js"
-// import { drawImportItems } from "./views/drawImportItems.js";
-// import { drawComponentMenu } from "./views/drawComponentMenu.js";
-// import { layersColorPicker } from "./views/layersColorPicker.js";
-// import { renderPreviewFootprint } from "./views/renderPreviewFootprint.js";
-// import { svgViewer } from "./views/svgViewer.js";
-// import { renderFootprint } from "./views/renderFootprint.js";
-// import { clearSelectedPath } from "./clearSelectedPath.js";
-// import logoURL from '../logo.svg'
-// import { inputRenderers } from "./views/inputRenderers.js";
-
-// import { drawDownloadGerberModal } from "./views/drawDownloadGerberModal.js";
-// import { drawDownloadKiCadModal } from "./views/drawDownloadKiCadModal.js";
-// import { formatCode } from "./formatCode.js";
-// import { saveFile } from "./saveFile.js";
-// import { drawSvgToModsModal } from "./views/drawSvgToModsModal.js";
-// import "./components/netlist-editor.js";
-// import "./components/wire-editor.js";
-// import "./components/color-picker.js";
-// import "./components/footprint-editor/footprint-editor.js";
+import { setExample } from "../events/setExample";
+import { saveSketch } from "../events/saveSketch";
+import { setPaneSizes } from "../events/setPaneSizes";
+import { connectToMachine } from "../events/connectToMachine";
+import { connectToMidi } from "../events/connectToMidi";
+import { connectToCamera } from "../events/connectToCamera";
+import { startPrint } from "../events/startPrint";
+import { stopPrint } from "../events/stopPrint";
+import { evaluateJs, updatePreview } from "../repl";
+import { setPrinter } from "../events/setPrinter";
 
 
 export function view(state) {
-    return html`
-    <div class="top-menu">
-      <div class="left">
-        <span class="logo">p5.fab</span>
-        <div class="menu-item" @click="${() => setTemplate(newTemplate)}">new</div>
-        <div class="menu-item" @click="${saveSketch}">save</div>
-        <label for="file-upload" class="menu-item">upload</label>
-        <input id="file-upload" type="file" />
-        <div class="menu-item">examples
-          <div class="menu-item-dropdown-content">
-            <i @click="${() => setExample('line-vase')}">line vase</i>
-            <i @click="setTemplate('2point5D-sketching')">2.5D sketching</i>
-            <i @cick="setTemplate('ripple')">ripple texture</i>
-            <i @cllick="setTemplate('nonplanar')">non-planar vase</i>
-          </div>
+  return html`
+    ${topMenu(state)}
+
+    <div class="outer">
+      <div id="left" class="split-horizontal">
+        <div class="code-editor">
+          ${state.error !== "" ? html`<div id="error-log">${state.error}</div>` : ""}
         </div>
+        ${machineSettings(state)}
       </div>
-      <div class="right">
-        <div class="menu-item">machine settings
-        </div> 
-        <div class="menu-item" onclick="updatePreview()">visualize toolpaths</div>
-        <div class="menu-item" onclick="evaluateJs('_fab.stopPrint();')">midi</div>
-        <a href="https://github.com/machineagency/p5.fab" target="_blank" rel="noopener noreferrer"
-          id="top-bar-link">source</a>
-        <div class="menu-item" onclick="showInfoModal()">info</div>
-        <!-- <div class="menu-item">tweet artifact</div> -->
-      </div>
-    </div>
 
-    <div class="content">
-      <div class="left-content">
-        <div class="code-editor"></div>
-        <div id="error-log"></div>
-      </div>
-      <div class="right-content">
-        <iframe id="preview" src="./editor/js/views/preview.html"></iframe>
-      </div>
-      <div class="pane-manager">
-      </div>
-    </div>
-
-    <div class="midi-content">
+      <div id="right" class="split-horizontal">
+        <div class="iframe-holder">
+          <iframe id="preview" src="./examples/preview.html"></iframe>
+        </div>
+       ${videoSettings(state)}
+       ${midiSettings(state)}
+      </div
     </div>
     `
 }
-// export function view(state) {
-// 	return html`
-// 		${menu(state)}
 
-// 		<div class="content">
-// 			<div class="left-side">
-// 				<div class="code-editor"></div>
-// 				${state.error !== "" ? html`<div class="error-log">${state.error}</div>` : "" }
-// 			</div>
-// 			<div class="right-side" @mousedown=${() => dispatch("RUN", { flatten: false })}>
-// 				${svgViewer(state)}
-// 				${state.selectedPathIndex >= 0
-// 					? html`
-// 						<div class="path-selected">
-// 							<div
-// 								class="clear-selected-path"
-// 								@click=${clearSelectedPath}>
-// 								unselect path
-// 							</div>
-// 							<select
-// 								.value=${state.cubicHandleManipulation}
-// 								@input=${e => {
-// 									state.cubicHandleManipulation = e.target.value;
-// 									dispatch("RENDER");
-// 								}}>
-// 							  <option value="symmetric">symmetric</option>
-// 							  <option value="colinear">colinear</option>
-// 							  <option value="broken">broken</option>
-// 							</select>
-// 							<div>hold z to toggle junction type</div>
-// 							<div>hold x to delete point</div>
-// 						</div>
-// 						`
-// 					: ""}
-// 				<div class="footprint-toolbox">
-// 					<div style="overflow: hidden; overflow-y: scroll; min-height: 100%;">
-// 						${state.inputs.length > 0 ? html`<div class="toolbox-title">Inputs:</div>` : ""}
-// 						<div class="input-panel">
-// 							${state.inputs.map(input => inputRenderers[input[0].type](...input, state))}
-// 						</div>
+// Dividing up into smaller chunks of html
+const topMenu = state => html`
+    <div class="top-menu">
+          <div class="left">
+            <span class="logo">p5.fab</span>
+            <div class="menu-item-icon" @click="${() => setExample('new')}"><i class="fa-solid fa-file"></i></div>
+            <div class="menu-item-icon" @click="${saveSketch}"><i class="fa-solid fa-download"></i></div>
+            <label for="file-upload" class="menu-item-icon"><i class="fa-solid fa-upload"></i></label>
+            <input id="file-upload" type="file" />
+            <div class="menu-item-icon"><i class="fa-solid fa-book"></i>
+              <div class="menu-item-dropdown-content">
+                <i @click="${() => setExample('line-vase')}">line vase</i>
+                <i @click="${() => setExample('2point5D-sketching')}">2.5D sketching</i>
+                <i @click="${() => setExample('ripple')}">ripple texture</i>
+                <i @click="${() => setExample('nonplanar')}">non-planar vase</i>
+                <i @click="${() => setExample('midiEx')}">midi</i>
+              </div>
+            </div>
+          </div>
+          <div class="right">
+            <div class="menu-item-icon" @click="${() => updatePreview(state)}"><i class="fa-solid fa-play"></i></div>
+            <div class="menu-item-icon" id="run-sketch" @click="${() => updatePreview(state, true)}"><i class="fa-solid fa-rotate-right"></i></div> 
+            <div class="menu-item-icon" @click="${setPaneSizes}"><i id="machine-settings" class="fa-solid fa-gear"></i></div> 
+            <div class="menu-item-icon" @click="${setPaneSizes}"><i id="midi-content" class="fa-solid fa-music"></i></div>
+            <div class="menu-item-icon" @click="${setPaneSizes}"><i id="video-content" class="fa-solid fa-video"></i></div>
+            <a href="https://github.com/machineagency/p5.fab" target="_blank" rel="noopener noreferrer"
+              class="menu-item-icon"><i class="fa-brands fa-github"></i></a>
+            <!-- <div class="menu-item" onclick="showInfoModal()">info</div> -->
+            <!-- <div class="menu-item">tweet artifact</div> -->
+          </div>
+    </div>
+`;
 
-// 						<div class="toolbox-title" @click=${e => {
-// 							document.querySelector(".footprint-list-inner").classList.toggle("hidden");
-// 							e.target.classList.toggle("inner-hidden");
-// 						}}>Footprints:</div>
-// 						<div class="footprint-list-inner">
-// 							<div class="import-button-container">
-// 								<div class="import-button" @mousedown=${() => {
-// 				          state.componentMenu = true;
-// 				          dispatch("RENDER");
-// 				        }}>import</div>
-// 				      </div>
-// 							<div class="component-list">
-// 								${Object.values(state.footprints).map(renderFootprint)}
-// 							</div>
-// 						</div>
+const machineSettings = state => html`
+    <div class="machine-settings">
+      <div class="menu-item" id="button" @click="${connectToMachine}">connect</div>
+      <div class="menu-item" id="button" @click="${startPrint}">start print</div>
+      <div class="menu-item" id="button" @click="${stopPrint}">stop print</div>
+      <div class="menu-item" id="button">set printer
+              <div class="menu-item-dropdown-content">
+                <i @click="${() => setPrinter(state, 'ender3-pro')}">Ender3-Pro</i>
+                <i @click="${() => setPrinter(state, 'jubilee')}">Jubilee</i>
+                <i @click="${() => setPrinter(state, 'q5')}">FLSun Q5</i>
+              </div>
+            </div>
+      <p>Connection Status: <span id="connection-status">${state.fabDeviceConnected ? "Connected" : "Not Connected"}</span> </p>
+      ${state.fabConfig ? html`
+        <details>
+        <summary>Printer details</summary>
+        <ul>
+          <li> maxX: ${state.fabConfig.maxX} </li>
+          <li> maxY: ${state.fabConfig.maxY} </li>
+          <li> maxZ: ${state.fabConfig.maxZ} </li>
+          <li> nozzle diameter: ${state.fabConfig.nozzleDiameter} </li>
+          <li> filament diameter: ${state.fabConfig.filamentDiameter} </li>
+        </ul>
+        </details>`
+    : ""}
+     
+    </div>
+`;
 
-// 						<wire-editor></wire-editor>
+const midiSettings = state => html`
+    <div class="midi-content">
+      <div class="menu-item" id="button" @click="${connectToMidi}">connect</div>
+      <p id="midi-connection-status">
+        ${state.midiDeviceAvailable && state.midiConnectionEstablished ? "Connected" : "Not Connected"}
+      </p>
+      <p id="midi-data">
+        ${state.midiData !== "" && state.midiDeviceAvailable && state.midiConnectionEstablished ? html`<div id="midi-data">
+          <ul>
+            <li>Note: ${state.midiData.note}</li>
+            <li>Velocity: ${state.midiData.velocity}</li>
+            <li>Type: ${state.midiData.type}</li>
+          </ul>
+        </div>`
+    : ""}        
+      </p>
+    </div>
+`;
 
-// 						${layersColorPicker(state)}
+const videoSettings = state => html`
+    <div class="video-settings">
+      <div class="menu-item" id="button" @click="${connectToCamera}">connect</div>
+      <br><br>
+  ${!state.cameraConnected ? "" : 
+  html`<div class="select">
+    <label for="video-source">Video source: </label>
+    <br>
+    <select id="video-source"></select>
+    </div>
+`}
 
-// 						<div style="min-height: 100px;"></div>
-// 					</div>
+      <video id="camera-stream" autoplay></video>
+    </div>
+`;
 
-// 					<div class="nub" @click=${() => {
-// 						document.querySelector(".footprint-toolbox").classList.toggle("footprint-toolbox-closed");
-// 					}}></div>
 
-// 				</div>
-// 				${state.previewFootprint ? renderPreviewFootprint(...state.previewFootprint) : ""}
-// 			</div>
-// 			<div id="vertical-bar"></div>
-// 			${drawComponentMenu(files)}
-// 		</div>
-// 		<div class="drop-modal hidden">
-// 			<div class="drop-info">Upload JS file, KiCAD Component Module, SVG Component, or JSON Component</div>
-// 		</div>
-// 		${drawDownloadGerberModal(state)}
-// 		${drawDownloadKiCadModal(state)}
-// 		${drawSvgToModsModal(state)}
-// 		<netlist-editor .pcb=${state.pcb} .idToName=${state.idToName}></netlist-editor>
-// 		<footprint-editor><footprint-editor>
-// 	`
-// }
-
-// const menu = state => html`
-// 	<div class="top-menu">
-// 		<div class="left">
-// 			<img src=${logoURL} class="w-10 m-1" alt="fab-circuit-logo" />
-// 			<div
-// 				class="menu-item"
-// 				@click=${() => dispatch("RUN")}>
-// 				run (shift + enter)
-// 			</div>
-// 			<div class="menu-item" @click=${() => dispatch("NEW_FILE")}>new</div>
-// 			<div
-// 				class="menu-item"
-// 				@click=${() => {
-//         const code = state.codemirror.view.state.doc.toString();
-
-//         saveFile(code);
-//     }}>
-// 				save${state.needsSaving ? "*" : ""}
-// 			</div>
-// 			 <div class="menu-item dropdown-container">
-// 				download
-// 				<div class="dropdown-content">
-// 					<div class="menu-item"
-// 						@click=${() => { dispatch("RUN", { flatten: true }); downloadSVG(state); }}>
-// 						svg
-// 					</div class="menu-item">
-// 					<div class="menu-item"
-// 						@click=${() => { dispatch("RUN", { flatten: true }); downloadPNG(state); }}>
-// 						png
-// 					</div class="menu-item">
-// 					<div class="menu-item"
-// 						@click=${() => downloadText(`${state.name === "" ? "anon" : state.name}.js`, state.codemirror.view.state.doc.toString())}>
-// 						js
-// 					</div>
-// 					<div class="menu-item"
-// 						@click=${(e) => {
-//         state.downloadGerberModal = true;
-//         dispatch("RENDER");
-//     }}>
-// 						gerber
-// 					</div class="menu-item">
-// 					<div class="menu-item"
-// 						@click=${(e) => {
-//         state.downloadKiCadModal = true;
-//         dispatch("RENDER");
-//     }}>
-// 						kicad
-// 					</div>
-// 					<div class="menu-item"
-// 						@click=${(e) => {
-//         state.svgToModsOptions.selectedMachine = undefined;
-//         state.svgToModsModal = true;
-//         dispatch("RENDER");
-//     }}>
-// 						mods
-// 					</div>
-// 					<input 
-// 						class="input-item"
-// 						style="margin: 3px;"
-// 						.value=${state.name}
-// 						placeholder="name-here"
-// 						@input=${(e) => { state.name = e.target.value }}/>
-// 				</div>
-// 			</div>
-// 			<div
-// 				class="menu-item center-button"
-// 				@click=${() => {
-//         state.panZoomParams.setScaleXY(state.limits);
-//     }}>
-// 				center-view
-// 			</div>
-// 			<div
-// 				class="menu-item"
-// 				@click=${() => {
-//         const ogCode = state.codemirror.view.state.doc.toString()
-//         const formatted = formatCode(ogCode)
-//         state.codemirror.view.dispatch({
-//             changes: {
-//                 from: 0,
-//                 to: ogCode.length,
-//                 insert: formatted
-//             }
-//         })
-//     }}>
-// 				tidy code
-// 			</div>
-// 			<div class="menu-item dropdown-container">
-// 				options
-// 				<div class="dropdown-content">
-// 					<div class="check-item">
-// 						<span>handles</span>
-// 						<input
-// 							type="checkbox"
-// 							checked=${state.viewHandles}
-// 							@change=${(e) => {
-//         state.viewHandles = e.target.checked;
-//         dispatch("RENDER");
-//     }}
-// 							class="handles-checkbox">
-// 						</input>
-// 					</div>
-// 					<div class="check-item">
-// 						<span>grid</span>
-// 						<input
-// 							type="checkbox"
-// 							.checked=${state.grid}
-// 							@change=${(e) => {
-//         state.grid = e.target.checked;
-//         dispatch("RENDER");
-//     }}
-// 							>
-// 						</input>
-// 					</div>
-// 					<div class="check-item">
-// 						<span>adaptiveGrid</span>
-// 						<input
-// 							type="checkbox"
-// 							.checked=${state.adaptiveGrid}
-// 							@change=${(e) => {
-//         state.adaptiveGrid = e.target.checked;
-//         dispatch("RENDER");
-//     }}
-// 							>
-// 						</input>
-// 					</div>
-// 					<div class="input-item">
-// 						<span>grid size:</span>
-// 						<input
-// 							type="number"
-// 							step="0.005"
-// 							min="0"
-// 							.value=${state.gridSize}
-// 							@change=${e => {
-//         state.gridSize = Number(e.target.value);
-//         dispatch("RENDER");
-//     }}>
-// 						</input>
-// 					</div>
-// 					<div class="check-item">
-// 						<span>show netlist</span>
-// 						<input
-// 							type="checkbox"
-// 							.checked=${state.showNetlist}
-// 							@change=${(e) => {
-//         state.showNetlist = e.target.checked;
-//         dispatch("RENDER");
-//     }}
-// 							>
-// 						</input>
-// 					</div>
-// 					<div class="check-item">
-// 						<span>snapToPad</span>
-// 						<input
-// 							type="checkbox"
-// 							.checked=${state.snapToPad}
-// 							@change=${(e) => {
-//         state.snapToPad = e.target.checked;
-//         dispatch("RENDER");
-//     }}
-// 							>
-// 						</input>
-// 					</div>
-// 					<div class="check-item">
-// 						<span>snapToPad Radius</span>
-// 						<input
-// 							type="number"
-// 							step="0.005"
-// 							min="0"
-// 							.value=${state.snapToPadRadius}
-// 							@change=${e => {
-//         state.snapToPadRadius = Number(e.target.value);
-//         dispatch("RENDER");
-//     }}>
-// 						</input>
-// 					</div>
-// 					<div class="check-item">
-// 						<span>vim mode</span>
-// 						<input
-// 							type="checkbox"
-// 							.checked=${state.vimMode}
-// 							@change=${(e) => {
-//         state.vimMode = e.target.checked;
-//         const cmEl = document.querySelector(".code-editor");
-//         const str = state.codemirror.view.state.doc.toString();
-//         cmEl.innerHTML = "";
-//         state.codemirror = initCodeMirror(cmEl, state.vimMode);
-//         state.codemirror.view.dispatch({
-//             changes: { from: 0, insert: str }
-//         });
-//     }}
-// 							>
-// 						</input>
-// 					</div>
-// 				</div>
-// 			</div>
-// 		</div>
-// 		<a class="github-logo" href="https://github.com/leomcelroy/svg-pcb">
-// 			<i class="fa fa-github" style="font-size:24px"></i>
-// 		</a>
-// 	</div>
-// `;
