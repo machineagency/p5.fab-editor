@@ -21,7 +21,7 @@ export function init() {
 
   var leftVerticalSplit = Split(['.code-editor', '.machine-settings'], {
     direction: 'vertical',
-    sizes: [80, 20],
+    sizes: [75, 25],
     minSize: 5,
     gutterSize: 15,
     onDragStart: function () {
@@ -34,7 +34,7 @@ export function init() {
      }
   });
 
-  var rightVerticalSplit = Split(['.iframe-holder', '.video-settings', '.midi-content'], {
+  var rightVerticalSplit = Split(['.iframe-holder', '.midi-content'], {
     direction: 'vertical',
     sizes: [60, 20, 20],
     minSize: 5,
@@ -42,12 +42,12 @@ export function init() {
     onDragStart: function () {
       addDragClass('.iframe-holder');
       addDragClass('.midi-content');
-      addDragClass('.video-settings');
+      // addDragClass('.video-settings');
     },
     onDragEnd: function () {
       removeDragClass('.iframe-holder');
       removeDragClass('.midi-content');
-      removeDragClass('.video-settings');
+      // removeDragClass('.video-settings');
      }
   });
 

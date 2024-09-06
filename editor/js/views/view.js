@@ -29,7 +29,7 @@ export function view(state) {
         <div class="iframe-holder">
           <iframe id="preview" src="./examples/preview.html"></iframe>
         </div>
-       ${videoSettings(state)}
+       <!--${videoSettings(state)}-->
        ${midiSettings(state)}
       </div
     </div>
@@ -71,6 +71,7 @@ const topMenu = state => html`
 
 const machineSettings = state => html`
     <div class="machine-settings">
+      <p><b>machine</b></p>
       <div class="menu-item" id="button" @click="${connectToMachine}">connect</div>
       <div class="menu-item" id="button" @click="${startPrint}">start print</div>
       <div class="menu-item" id="button" @click="${stopPrint}">stop print</div>
@@ -82,7 +83,7 @@ const machineSettings = state => html`
               </div>
             </div>
       <p>Connection Status: <span id="connection-status">${state.fabDeviceConnected ? "Connected" : "Not Connected"}</span> </p>
-      ${state.fabConfig ? html`
+      <!--${state.fabConfig ? html`
         <details>
         <summary>Printer details</summary>
         <ul>
@@ -92,7 +93,7 @@ const machineSettings = state => html`
           <li> nozzle diameter: ${state.fabConfig.nozzleDiameter} </li>
           <li> filament diameter: ${state.fabConfig.filamentDiameter} </li>
         </ul>
-        </details>`
+        </details> -->`
     : ""}
      
     </div>
@@ -100,6 +101,7 @@ const machineSettings = state => html`
 
 const midiSettings = state => html`
     <div class="midi-content">
+      <p><b>MIDI</b></p>
       <div class="menu-item" id="button" @click="${connectToMidi}">connect</div>
       <p id="midi-connection-status">
         ${state.midiDeviceAvailable && state.midiConnectionEstablished ? "Connected" : "Not Connected"}
