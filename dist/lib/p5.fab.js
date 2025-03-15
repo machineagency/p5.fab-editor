@@ -77,13 +77,15 @@ p5.prototype.predraw = (function (b) {
       // Preserve fab object & serial connection to visualize new sketch while the machine is running
       if (typeof (fab) === "undefined") {
         fab = createFab();
-        midiController = createMidiController(debug = true);
+        // midiController = createMidiController(debug = true);
       }
 
       if (typeof fabDraw === "function") {
         // Reset values to run fabDraw
         _fab.lastAsyncPosition = new XYZEFC();
         _fab.asyncPosition = new XYZEFC();
+        // _fab.serial.write("M114\n");
+        console.log("the async position after resetting values is", _fab.asyncPosition);
         _fab.model = "";
         _fab.commands = [];
         _fab.commandsForRendering = [];
@@ -125,7 +127,7 @@ class XYZEFC {
     this.y = y || 0;
     this.z = z || 0;
     this.e = e || 0;
-    this.f = f || 0;
+    this.f = f || 1500;
     this.c = c || "";
   }
 }
@@ -207,13 +209,15 @@ const defaultPrinterSettings = {
   maxY: 220,
   maxZ: 250,
   autoConnect: true,
-  fabscribe: false,
+  fabscribe: true,
 };
 
 class Fab {
   constructor(config = defaultPrinterSettings) {
     this.configure(config);
-    this.setupSerialConnection();
+    if (navigator.serial){
+      this.setupSerialConnection();
+    }    
 
     // Setup machine properties and initial state
     this.printer = config.name;
@@ -224,11 +228,13 @@ class Fab {
     this.asyncPosition = new XYZEFC();                // Absolute positions used to plan toolpaths
     this.realtimePosition = new XYZEFC();             // Realtime positions used for interactive printing
     this.relativePositioning = false;                 // Position mode for XYZ; E is always relative
-    this.nozzleT = 0;                                 // Nozzle temp in CelSius
-    this.reportedPos = "N/A";
+    this.nozzleT = 0;                                 // Nozzle temp in Celsius
+    this.reportedPos = {};
+    this.gotInitPosition = false;
     this.defaultSpeed = 25;                           // mm/sec
     this.isPrinting = false;
     this.continuousMode = false;                      // added in etchasketch
+    this.fabscribe = true;
 
     // Rendering info
     this.vertices = [];
@@ -273,15 +279,17 @@ class Fab {
 
     // Midi setup
     // TODO: Put in a conditional? And can I remove any of these?
-    this.midiMode = true;
+    this.midiMode = false;
     this.midiSetup = null;
     this.midiDraw = null;
     this.firstMoveComplete = false;
-    this.segmentationLength = 1;
+    this.segmentationLength = 0.5;
 
     // Adding to test fabscription on jubilee
     // TODO: Move into conditional above?
     this.positionQueryIntervalID = null;
+
+    console.log("FABSCRIBE?", this.fabscribe);
   }
 
   //===================================
@@ -361,6 +369,9 @@ class Fab {
         connected: _fab.connected,
       }
       console.log("FAB_CONNECTION_CHANGE", messageData);
+
+      // Get position after connection is established
+      // _fab.serial.write("M114\n");
     });
 
     this.serial.on("close", function () {
@@ -368,7 +379,7 @@ class Fab {
       var messageData = {
         connected: _fab.connected,
       }
-      console.log("FAB_CONNECTION_CHANGE", messageData);
+      console.log("FAB_CONNECTION_CHANxGE", messageData);
     })
 
     if (this.autoConnect) {
@@ -396,8 +407,8 @@ class Fab {
       // For the editor, its slightly different. Find a way to accommodate this.
       // function called from <anonymous>:char:line trace
       // the line reported is the line in the sketch +8 (why 8?)
-      var traceLineNum = trace.split('<anonymous>')[1].split(':')[1];
-
+      // var traceLineNum = trace.split('<anonymous>')[1].split(':')[1];
+      var traceLineNum = 0;
       this.trace.push([cmd, traceLineNum]);
     }
 
@@ -417,19 +428,18 @@ class Fab {
     const code = splitCmd[0];
     if (moveCommands.indexOf(code) > -1) {
       const moveCommand = new LinearMove(cmd);
-      // console.log('The comment is: ', moveCommand.comment);
 
       // For now, don't subdivide the first move, since we don't know where we are to start
       // TODO: Get start position first thing instead
       if (!this.firstMoveComplete) {
         this.commands.push(cmd);
         this.firstMoveComplete = true;
-        this.asyncPosition.x = moveCommand.x;
-        this.asyncPosition.y = moveCommand.y;
-        this.asyncPosition.z = moveCommand.z;
-        this.lastAsyncPosition.x = moveCommand.x;
-        this.lastAsyncPosition.y = moveCommand.y;
-        this.lastAsyncPosition.z = moveCommand.z;
+        this.asyncPosition.x = moveCommand.x == null ? this.asyncPosition.x : moveCommand.x;
+        this.asyncPosition.y = moveCommand.y == null ? this.asyncPosition.y : moveCommand.y;
+        this.asyncPosition.z = moveCommand.z == null ? this.asyncPosition.z : moveCommand.z;
+        this.lastAsyncPosition.x = moveCommand.x == null ? this.lastAsyncPosition.x : moveCommand.x;
+        this.lastAsyncPosition.y = moveCommand.y == null ? this.lastAsyncPosition.y : moveCommand.y;
+        this.lastAsyncPosition.z = moveCommand.z == null ? this.lastAsyncPosition.z : moveCommand.z;
         return;
       }
 
@@ -497,6 +507,7 @@ class Fab {
 
   print() {
     console.log("Starting print");
+    console.log("GCODE TO MIDI TIMESTAMPS AT START:", this.gcodeToMidiTimestamps);
 
     if (this.isPrinting) {
       console.log("Print in progress, cant start a new print");
@@ -509,6 +520,8 @@ class Fab {
       // TODO: If sync commands are needed, then start this interval after those are sent
       // Try taking this out and instead testing in fabscription
       // because long foam prints had ~1second intervals between data collections
+      console.log('am i fabscribing here to get rtpos?', this.fabscribe);
+      this.fabscribe = true; // undefined if i don't set this here. why?
       if (this.fabscribe) {
         this.positionQueryIntervalID = setInterval(() => {
           this.getRealtimePosition();
@@ -517,6 +530,7 @@ class Fab {
     }
 
     // Send first command
+    fab.getRealtimePosition();
     if (this.commandStream.length > 0) {
       this.isPrinting = true;
       this.serial.write(this.commandStream[0] + "\n");
@@ -559,6 +573,7 @@ class Fab {
       const positionQuery = `M118 S{"RT_POS " ^ "X:" ^ move.axes[0].machinePosition ^ " Y:" ^ move.axes[1].machinePosition + 42.75 ^ " Z:" ^ move.axes[2].machinePosition - 3.64}`;
       // this.serial.write(positionQuery + "\n"); // this works for Marlin, but doesn't for Duet
       // console.log("I just sent: ", positionQuery);
+      this.fabscribe = true; // status is undefined if i don't add this here. why?
       if (this.fabscribe) { this.fabscription(commandToSend) };
     } else {
       console.log("All commands sent!");
@@ -591,7 +606,7 @@ class Fab {
       this.sentCommandsFiltered.push(commandToSend);
     }
     else {
-      console.log("DELTA T: ", Date.now() - this.lastRtPosSent);
+      // console.log("DELTA T: ", Date.now() - this.lastRtPosSent);
       this.lastRtPosSent = Date.now();
 
     }
@@ -623,13 +638,26 @@ class Fab {
       // Update the 'realtime' positions
       // This is technically a bit in front of real position depending on buffer size
       let moveCommand = new LinearMove(cmd);
+      // console.log('my coment here is: ', moveCommand.comment);
       if (moveCommand.x) { this.realtimePosition.x = moveCommand.x };
       if (moveCommand.y) { this.realtimePosition.y = moveCommand.y };
       if (moveCommand.z) { this.realtimePosition.z = moveCommand.z };
 
       if (this.midiDraw) {
-        moveCommand = this.midiDraw(moveCommand); // run the midiDraw function
+        // skip this if it contains the 'noMidi' tag
+        // TODO: a robust way to do this
+        if (moveCommand.comment && moveCommand.comment.includes('nomidi')) {
+          console.log('NOMIDI!');
+          // skip if we are included a nomidi tag
+        }
+        else {
+          moveCommand = this.midiDraw(moveCommand); // run the midiDraw function
+        }
         cmd = moveCommand.toString();
+        // moved this inside the above conditional to accommodate tags
+        // moveCommand = this.midiDraw(moveCommand); // run the midiDraw 
+        // function
+        // cmd = moveCommand.toString();
 
         // Try keeping a log of the gcode lines sent and the midi timestamp to adjust in fabscription
         if (this.fabscribe) {
@@ -666,9 +694,11 @@ class Fab {
         }
         let currentTime = Date.now() - _fab.startTime;
       }
+      console.log(_fab.serialResp);
 
       if (_fab.serialResp.search(" Count ") > -1) {
-        _fab.reportedPos = _fab.serialResp.split(" Count ")[0].trim();
+        // _fab.reportedPos = _fab.serialResp.split(" Count ")[0].trim();
+        _fab.updateReportedPosition(_fab.serialResp.split(" Count ")[0].trim());
         if (_fab.fabscribe) {
           var logEntry = [Date.now() - _fab.startTime, _fab.reportedPos];
           _fab.log.push(logEntry);
@@ -705,6 +735,37 @@ class Fab {
 
       _fab.serialResp = "";
     }
+  }
+
+  updateReportedPosition(resp) {
+    console.log('updating reported position');
+    resp.split(" ").forEach((item) => {
+      if (item.includes("X:")) {
+        this.reportedPos['X'] = item.split(":")[1];
+      }
+      if (item.includes("Y:")) {
+        this.reportedPos['Y'] = item.split(":")[1];
+      }
+      if (item.includes("Z:")) {
+        this.reportedPos['Z'] = item.split(":")[1];
+      }
+    }
+    );
+
+    if (!this.gotInitPosition) {
+      console.log('updating initial position');
+      this.asyncPosition.x = this.reportedPos['X'];
+      this.asyncPosition.y = this.reportedPos['Y'];
+      this.asyncPosition.z = this.reportedPos['Z'];
+      this.lastAsyncPosition.x = this.reportedPos['X'];
+      this.lastAsyncPosition.y = this.reportedPos['Y'];
+      this.lastAsyncPosition.z = this.reportedPos['Z'];
+      this.gotInitPosition = true;
+      console.log(this.asyncPosition);
+      // fabDraw();
+      // this.parseGcode();
+    }
+
   }
 
   parseGcode() {
@@ -786,7 +847,10 @@ class Fab {
       this.drawCartesianPrinter();
     }
 
-    if (this.vertices.length == 0) { return };
+    // if (this.vertices.length == 0) { 
+    //   this.updateCameraPosition(); 
+    //   return 
+    // };
     if (!this.model) {
       // Tracks current toolpath position
       // Assumes you're homed to start
@@ -798,6 +862,9 @@ class Fab {
         var vertexData = this.vertices[v];
         if (vertexData.command == "G0") {
           // Update toolpath position
+          // stroke(0,0,255);
+          // vertex(toolpathPos.x, toolpathPos.y, toolpathPos.z);
+          // vertex(vertexData.vertex.x, vertexData.vertex.y, vertexData.vertex.z);
           toolpathPos = toolpathPos.set([
             vertexData.vertex.x,
             vertexData.vertex.y,
@@ -805,6 +872,7 @@ class Fab {
           ]);
           continue; // no extrusions on G0
         } else if (vertexData.command == "G1") {
+          stroke(0);
           // Draw a line between current toolpath position and next toolpath position
           vertex(toolpathPos.x, toolpathPos.y, toolpathPos.z);
           vertex(vertexData.vertex.x, vertexData.vertex.y, vertexData.vertex.z);
@@ -988,6 +1056,7 @@ class Fab {
   }
 
   stopPrint() {
+    console.log("FABSCRIBE STATUS:", this.fabscribe);
     this.commandStream = [];
     this.isPrinting = false;
     fabDraw();
@@ -996,8 +1065,16 @@ class Fab {
     clearInterval(this.positionQueryIntervalID);
     this.positionQueryIntervalID = null;
 
-    if (this.fabscribe) { fab.downloadFabscriptionLog() };
+    if (this.fabscribe) { 
+      console.log('not downloading log');
+      // fab.downloadFabscriptionLog() 
+    };
 
+    // Reset fabscription
+    this.midiRecording = {}; 
+    this.gcodeToMidiTimestamps = [];
+    this.sentCommandsFiltered = [];
+    this.sentCommands = [];
   }
 
   restartPrinter() {
@@ -1008,10 +1085,10 @@ class Fab {
 
   introLine(z = 0.3) {
     this.setAbsolutePositionXYZ();
-    this.moveTo(5, 20, 0.2, 25);
-    this.moveExtrude(5, 200, 0.2, 25);
-    this.moveTo(8, 200, 0.2, 25);
-    this.moveExtrude(8, 20, 0.2, 25);
+    this.moveTo(5, 20, z, 25);
+    this.moveExtrude(5, 200, z, 25);
+    this.moveTo(8, 200, z, 25);
+    this.moveExtrude(8, 20, z, 25);
     // if (this.coordinateSystem != "delta") {
     //   this.moveTo(5, 20, z, 85);
     //   this.moveExtrude(5, 200, z, 25);
@@ -1084,6 +1161,8 @@ class Fab {
       if (z) { this.asyncPosition.z = parseFloat(z).toFixed(2) };
     }
     else {
+      console.log('relative move');
+      console.log(x,y,z);
       if (x) { this.asyncPosition.x = (parseFloat(this.asyncPosition.x) + parseFloat(x)).toFixed(2) };
       if (y) { this.asyncPosition.y = (parseFloat(this.asyncPosition.y) + parseFloat(y)).toFixed(2) };
       if (z) { this.asyncPosition.z = (parseFloat(this.asyncPosition.z) + parseFloat(z)).toFixed(2) };
@@ -1133,10 +1212,10 @@ class Fab {
     return cmd;
   }
 
-  moveTo(x, y, z, v) {
+  moveTo(x, y, z, v, comment) {
     // Move directly to an absolute coordinate without extrusion. 
     this.setAbsolutePositionXYZ();
-    this._moveXYZE({ x: x, y: y, z: z, v: v });
+    this._moveXYZE({ x: x, y: y, z: z, v: v, comment: comment});
   }
 
   move(dx, dy, dz, v) {
